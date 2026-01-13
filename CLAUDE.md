@@ -296,7 +296,7 @@ type ModuleModel interface {
 - [x] Simon Says Module
 - [x] Memory Module
 - [x] Who's On First Module
-- [ ] Maze Module
+- [x] Maze Module
 - [x] Morse Code Module
 - [ ] Needy Vent Gas Module
 - [ ] Needy Knob Module
