@@ -28,9 +28,9 @@ type SimonModule struct {
 	width  int
 	height int
 
-	state           *pb.SimonState
-	sequence        []pb.Color
-	sequencePos     int
+	state    *pb.SimonState
+	sequence []pb.Color
+
 	showingSequence bool
 	isAnimating     bool
 
@@ -53,7 +53,6 @@ func NewSimonModule(mod *pb.Module, client client.GameClient, sessionID, bombID 
 	m.state = mod.GetSimonState()
 	if m.state != nil {
 		m.sequence = m.state.GetCurrentSequence()
-		m.sequencePos = 0
 		m.showingSequence = true
 	}
 
@@ -144,6 +143,10 @@ func (m *SimonModule) updateAnimation() {
 
 func (m *SimonModule) pressColor(color pb.Color) tea.Cmd {
 	return func() tea.Msg {
+		m.showingSequence = false
+		m.isAnimating = false
+		m.lastFlashedIndex = -1
+
 		input := &pb.PlayerInput{
 			SessionId: m.sessionID,
 			BombId:    m.bombID,
@@ -167,14 +170,23 @@ func (m *SimonModule) pressColor(color pb.Color) tea.Cmd {
 		} else if result.GetStrike() {
 			m.message = "STRIKE!"
 			m.messageType = "error"
-			m.sequencePos = 0
+			if simonResult := result.GetSimonInputResult(); simonResult != nil {
+				displaySeq := simonResult.GetDisplaySequence()
+				if len(displaySeq) > 0 {
+					m.sequence = displaySeq
+				}
+			}
 			m.showingSequence = true
 			m.startTime = time.Now()
 			m.lastFlashedIndex = -1
 			m.isAnimating = false
 		} else if simonResult := result.GetSimonInputResult(); simonResult != nil {
+			displaySeq := simonResult.GetDisplaySequence()
+			if len(displaySeq) > 0 {
+				m.sequence = displaySeq
+			}
+
 			if simonResult.GetHasFinishedSeq() {
-				m.sequencePos = 0
 				m.showingSequence = true
 				m.startTime = time.Now()
 				m.lastFlashedIndex = -1
