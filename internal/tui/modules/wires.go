@@ -188,7 +188,7 @@ func (m *WiresModule) UpdateState(mod *pb.Module) {
 }
 
 func (m *WiresModule) Footer() string {
-	return "[1-6] Cut wire | [ESC] Back to bomb | [Q]uit"
+	return "[1-6] Cut wire | [ESC] Back to bomb"
 }
 
 func colorToString(c pb.Color) string {

@@ -158,6 +158,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.flashStrike = true
 			m.strikeFlashUntil = time.Now().Add(500 * time.Millisecond)
 		}
+		if bombStatus := result.GetBombStatus(); bombStatus != nil {
+			bomb := m.getCurrentBomb()
+			if bomb != nil {
+				bomb.StrikeCount = bombStatus.GetStrikeCount()
+			}
+		}
 		if result.GetSolved() && m.activeModule != nil {
 			m.activeModule.UpdateState(&pb.Module{
 				Id:     result.GetModuleId(),

@@ -261,5 +261,5 @@ func (m *KeypadModule) UpdateState(mod *pb.Module) {
 }
 
 func (m *KeypadModule) Footer() string {
-	return "[1-4] Select symbol | [ESC] Back to bomb | [Q]uit"
+	return "[1-4] Select symbol | [ESC] Back to bomb"
 }

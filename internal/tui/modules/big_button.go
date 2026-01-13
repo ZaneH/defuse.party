@@ -297,9 +297,9 @@ func (m *BigButtonModule) UpdateState(mod *pb.Module) {
 }
 
 func (m *BigButtonModule) Footer() string {
-	hint := "[T] Tap | [H] Hold | [R] Release | [ESC] Back to bomb | [Q]uit"
+	hint := "[T] Tap | [H] Hold | [R] Release | [ESC] Back to bomb"
 	if m.isHolding {
-		hint = "[R] Release | [ESC] Cancel | [Q]uit"
+		hint = "[R] Release | [ESC] Cancel"
 	}
 	return hint
 }

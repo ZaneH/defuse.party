@@ -70,7 +70,7 @@ func (m *UnimplementedModule) UpdateState(mod *pb.Module) {
 }
 
 func (m *UnimplementedModule) Footer() string {
-	return "[ESC] Back to bomb | [Q]uit"
+	return "[ESC] Back to bomb"
 }
 
 func moduleTypeName(t pb.Module_ModuleType) string {
