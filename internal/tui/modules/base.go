@@ -24,6 +24,8 @@ func NewModule(mod *pb.Module, client client.GameClient, sessionID, bombID strin
 	switch mod.GetType() {
 	case pb.Module_WIRES:
 		return NewWiresModule(mod, client, sessionID, bombID)
+	case pb.Module_BIG_BUTTON:
+		return NewBigButtonModule(mod, client, sessionID, bombID)
 	default:
 		return NewUnimplementedModule(mod)
 	}

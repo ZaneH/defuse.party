@@ -28,6 +28,8 @@ type WiresModule struct {
 	width  int
 	height int
 
+	cutWires map[int]bool
+
 	message     string
 	messageType string
 }
@@ -38,6 +40,7 @@ func NewWiresModule(mod *pb.Module, client client.GameClient, sessionID, bombID 
 		client:    client,
 		sessionID: sessionID,
 		bombID:    bombID,
+		cutWires:  make(map[int]bool),
 	}
 }
 
@@ -76,8 +79,7 @@ func (m *WiresModule) cutWire(wireNum int) tea.Cmd {
 			return ModuleResultMsg{Err: fmt.Errorf("invalid wire number")}
 		}
 
-		wire := wires[wireNum]
-		if wire.GetIsCut() {
+		if m.cutWires[wireNum] {
 			return ModuleResultMsg{Err: fmt.Errorf("wire already cut")}
 		}
 
@@ -92,6 +94,8 @@ func (m *WiresModule) cutWire(wireNum int) tea.Cmd {
 		if err != nil {
 			return ModuleResultMsg{Err: err}
 		}
+
+		m.cutWires[wireNum] = true
 
 		if result.GetStrike() {
 			m.message = "STRIKE! Wrong wire!"
@@ -124,13 +128,15 @@ func (m *WiresModule) View() string {
 		colorName := colorToString(wire.GetWireColor())
 		colorStyle := colorToStyle(wire.GetWireColor())
 
+		isCut := m.cutWires[i] || wire.GetIsCut()
+
 		wireDisplay := colorStyle.Render("▓▓▓▓▓▓▓▓▓▓▓▓▓")
-		if wire.GetIsCut() {
+		if isCut {
 			wireDisplay = styles.Help.Render("────────────────────")
 		}
 
 		line := fmt.Sprintf("  %d: %s  %s", i+1, wireDisplay, colorName)
-		if wire.GetIsCut() {
+		if isCut {
 			line += " (CUT)"
 		}
 		wireLines = append(wireLines, line)
@@ -176,7 +182,9 @@ func (m *WiresModule) IsSolved() bool {
 }
 
 func (m *WiresModule) UpdateState(mod *pb.Module) {
-	m.mod = mod
+	if mod.GetSolved() {
+		m.mod.Solved = true
+	}
 }
 
 func (m *WiresModule) Footer() string {
