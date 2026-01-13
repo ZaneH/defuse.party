@@ -291,11 +291,12 @@ func (m *SimonModule) renderButton(color pb.Color, label string, size int) strin
 
 	button := lipgloss.NewStyle().
 		Width(size).
-		Height(size / 2).
+		Height(size/2).
 		Background(bgColor).
 		Foreground(lipgloss.Color("#000000")).
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(borderColor).
+		Padding(1, 0).
 		Align(lipgloss.Center).
 		Render(label)
 
