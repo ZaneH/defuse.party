@@ -188,13 +188,6 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.handleBombSelectionKeys(msg)
 		case StateBombView:
 			return m.handleBombViewKeys(msg)
-		case StateModuleActive:
-			newModel, cmd := m.activeModule.Update(msg)
-			if newModule, ok := newModel.(modules.ModuleModel); ok {
-				m.activeModule = newModule
-				return m, cmd
-			}
-			return m, cmd
 		}
 
 		if msg.String() == "q" || msg.String() == "ctrl+c" {
@@ -207,6 +200,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+	}
+
+	if m.state == StateModuleActive && m.activeModule != nil {
+		newModel, cmd := m.activeModule.Update(msg)
+		if newModule, ok := newModel.(modules.ModuleModel); ok {
+			m.activeModule = newModule
+		}
+		return m, cmd
 	}
 
 	return m, nil

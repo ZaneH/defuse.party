@@ -258,13 +258,58 @@ type ModuleModel interface {
 - [x] Key repeat protection (prevents multiple HOLD sends)
 - [x] More circular button shape using curved box characters
 
-### 3.4-3.12 Remaining Modules (TODO)
+### 3.4 Morse Code Module
+**Input**: `[←]/[→]` or `[h]/[l]` Adjust frequency, `[ENTER]` Transmit
+**Display**:
+```
+╔════════════════════════════════════════════════════════════════╗
+║                       MORSE CODE                                ║
+╠════════════════════════════════════════════════════════════════╣
+║                                                                 ║
+║      ━━━━━━━━━━━━━━━━━┤●├━━━━━━━━━━━━━━━━━                      ║
+║                         (light blinking)                        ║
+║                                                                 ║
+║   ┌─────────────────────────────────────────┐                   ║
+║   │              FREQUENCY                  │                   ║
+║   │         ◄──  3.505 MHz  ──►             │                   ║
+║   │  ───────────────────●────────────────   │                   ║
+║   └─────────────────────────────────────────┘                   ║
+║                                                                 ║
+║                    ┌───────────┐                                ║
+║                    │    TX     │                                ║
+║                    └───────────┘                                ║
+║                                                                 ║
+╚════════════════════════════════════════════════════════════════╝
+```
+- [x] Animated blinking light (dots/dashes with timing from reference)
+- [x] Amber-colored light with glow effect
+- [x] Wire-mounted light design (resistor-like, single horizontal wire)
+- [x] Frequency slider with 16 positions using `strings.Builder` for Unicode safety
+- [x] TX button for submission
+- [x] Send MorseInput (frequency change and TX) to backend
+- [x] Handle strike/success feedback
+- [x] Pattern loops continuously until solved
+- [x] Real-time clock animation (uses `time.Since()` instead of tick counter)
+- [x] Index derived from frequency (fallback when backend returns 0)
+
+**Timing constants** (from reference):
+- DOT_DURATION = 0.3s
+- DASH_DURATION = 0.9s
+- SYMBOL_PAUSE = 0.3s
+- LETTER_PAUSE = 0.9s
+
+**Implementation notes**:
+- Animation uses real elapsed time (`time.Since(startTime)`) rather than tick-based counter, matching the React implementation's `THREE.Clock` approach
+- Slider uses `strings.Builder` for rune-aware string building to correctly handle multi-byte Unicode characters (e.g., `─` is 3 bytes in UTF-8)
+- Frequency index is derived from the displayed frequency using a closest-match function, as the backend's `selectedFrequencyIndex` field may not always be reliable
+
+### 3.5-3.12 Remaining Modules (TODO)
 - [ ] Simon Says Module
 - [x] Password Module
 - [x] Keypad Module
 - [ ] Who's On First Module
 - [ ] Memory Module
-- [ ] Morse Code Module
+- [x] Morse Code Module
 - [ ] Maze Module
 - [ ] Needy Vent Gas Module
 - [ ] Needy Knob Module
