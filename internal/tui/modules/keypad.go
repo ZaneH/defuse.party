@@ -200,17 +200,17 @@ func (m *KeypadModule) View() string {
 func renderKeypadButton(symbol string, activated bool, position int) string {
 	boxStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		Padding(1, 2).
-		Width(10).
-		Height(4)
+		Padding(0, 1).
+		Width(8).
+		Height(3)
 
 	if activated {
 		boxStyle = boxStyle.BorderForeground(lipgloss.Color("#6BCB77"))
 	}
 
 	symbolStyle := lipgloss.NewStyle().
-		Width(10).
-		Height(4).
+		Width(8).
+		Height(3).
 		Align(lipgloss.Center).
 		Bold(true)
 
