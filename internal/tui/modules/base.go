@@ -22,6 +22,8 @@ type ModuleModel interface {
 
 func NewModule(mod *pb.Module, client client.GameClient, sessionID, bombID string) ModuleModel {
 	switch mod.GetType() {
+	case pb.Module_CLOCK:
+		return NewUnimplementedModule(mod)
 	case pb.Module_WIRES:
 		return NewWiresModule(mod, client, sessionID, bombID)
 	case pb.Module_BIG_BUTTON:

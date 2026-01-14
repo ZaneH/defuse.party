@@ -172,6 +172,15 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			bomb := m.getCurrentBomb()
 			if bomb != nil {
 				bomb.StrikeCount = bombStatus.GetStrikeCount()
+
+				// Update cached clock module strikes
+				for _, cachedMod := range m.moduleCache {
+					if cachedMod.ModuleType() == pb.Module_CLOCK {
+						if clockMod, ok := cachedMod.(*modules.ClockModule); ok {
+							clockMod.UpdateStrikes(bomb.StrikeCount)
+						}
+					}
+				}
 			}
 		}
 		if result.GetSolved() && m.activeModule != nil {
@@ -284,7 +293,12 @@ func (m *Model) handleBombViewKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.activeModule = cached
 				return m, nil
 			} else {
-				m.activeModule = modules.NewModule(mod, m.gameClient, m.sessionID, m.getCurrentBomb().GetId())
+				// Special handling for clock module
+				if mod.GetType() == pb.Module_CLOCK {
+					m.activeModule = m.createClockModule(mod)
+				} else {
+					m.activeModule = modules.NewModule(mod, m.gameClient, m.sessionID, m.getCurrentBomb().GetId())
+				}
 				m.moduleCache[moduleID] = m.activeModule
 				return m, m.activeModule.Init()
 			}
@@ -337,6 +351,20 @@ func (m *Model) getCurrentBomb() *pb.Bomb {
 		return m.bombs[m.selectedBomb]
 	}
 	return nil
+}
+
+func (m *Model) createClockModule(mod *pb.Module) modules.ModuleModel {
+	bomb := m.getCurrentBomb()
+	if bomb == nil {
+		return modules.NewUnimplementedModule(mod)
+	}
+	return modules.NewClockModule(
+		mod,
+		m.startedAt,
+		m.duration,
+		bomb.GetStrikeCount(),
+		bomb.GetMaxStrikes(),
+	)
 }
 
 func (m *Model) getCurrentFaceModules() []*pb.Module {
@@ -517,16 +545,31 @@ func (m *Model) bombView() string {
 	var modules []string
 	for i, mod := range faceModules {
 		modTypeName := m.moduleTypeName(mod.GetType())
+		timer := m.getModuleTimer(mod)
 		solved := mod.GetSolved()
 		status := "○ PENDING"
 		if solved {
 			status = "✓ SOLVED"
 		}
+
+		// Format module line with right-aligned timer
+		moduleLine := fmt.Sprintf("[%d] %s", i+1, modTypeName)
+		if timer != "" {
+			// Right-align timer within ~40 char width
+			nameLen := len(moduleLine)
+			timerLen := len(timer)
+			padding := 40 - nameLen - timerLen
+			if padding < 1 {
+				padding = 1
+			}
+			moduleLine = fmt.Sprintf("%s%*s%s", moduleLine, padding, "", timer)
+		}
+
 		if i == m.selectedModule {
-			modules = append(modules, styles.Active.Render(fmt.Sprintf("[%d] %s", i+1, modTypeName)))
+			modules = append(modules, styles.Active.Render(moduleLine))
 			modules = append(modules, styles.Active.Render(fmt.Sprintf("  > SELECTED    %s", status)))
 		} else {
-			modules = append(modules, fmt.Sprintf("[%d] %s", i+1, modTypeName))
+			modules = append(modules, moduleLine)
 			modules = append(modules, fmt.Sprintf("  %s", status))
 		}
 		modules = append(modules, "")
@@ -556,6 +599,8 @@ func (m *Model) bombView() string {
 
 func (m *Model) moduleTypeName(t pb.Module_ModuleType) string {
 	switch t {
+	case pb.Module_CLOCK:
+		return "CLOCK"
 	case pb.Module_WIRES:
 		return "WIRES"
 	case pb.Module_PASSWORD:
@@ -581,6 +626,55 @@ func (m *Model) moduleTypeName(t pb.Module_ModuleType) string {
 	default:
 		return "UNKNOWN"
 	}
+}
+
+func (m *Model) getModuleTimer(mod *pb.Module) string {
+	now := time.Now()
+
+	if mod.GetType() == pb.Module_CLOCK {
+		elapsed := now.Sub(m.startedAt)
+		remaining := m.duration - elapsed
+		if remaining < 0 {
+			remaining = 0
+		}
+		mins := int(remaining.Minutes())
+		secs := int(remaining.Seconds()) % 60
+		return fmt.Sprintf("[%d:%02d]", mins, secs)
+	}
+
+	if mod.GetType() == pb.Module_NEEDY_VENT_GAS {
+		if state := mod.GetNeedyVentGasState(); state != nil {
+			if state.GetCountdownStartedAt() == 0 {
+				return "" // Inactive, no timer
+			}
+			startedAt := time.Unix(state.GetCountdownStartedAt(), 0)
+			elapsed := now.Sub(startedAt)
+			remaining := time.Duration(state.GetCountdownDuration())*time.Second - elapsed
+			if remaining < 0 {
+				remaining = 0
+			}
+			secs := int(remaining.Seconds())
+			return fmt.Sprintf("[0:%02d]", secs)
+		}
+	}
+
+	if mod.GetType() == pb.Module_NEEDY_KNOB {
+		if state := mod.GetNeedyKnobState(); state != nil {
+			if state.GetCountdownStartedAt() == 0 {
+				return "" // Inactive, no timer
+			}
+			startedAt := time.Unix(state.GetCountdownStartedAt(), 0)
+			elapsed := now.Sub(startedAt)
+			remaining := time.Duration(state.GetCountdownDuration())*time.Second - elapsed
+			if remaining < 0 {
+				remaining = 0
+			}
+			secs := int(remaining.Seconds())
+			return fmt.Sprintf("[0:%02d]", secs)
+		}
+	}
+
+	return ""
 }
 
 func (m *Model) renderHeader(now time.Time) string {

@@ -422,6 +422,18 @@ services:
 
 ## Technical Considerations
 
+### Coding Standards
+
+**Comments**: Avoid adding code comments unless they are extremely important for understanding critical logic. Code should be self-explanatory through clear naming and structure. Only add comments when:
+- Explaining non-obvious algorithmic decisions
+- Documenting workarounds for known issues
+- Clarifying complex business logic that cannot be simplified
+
+Do not add comments for:
+- Obvious operations (e.g., "// Create module")
+- Self-explanatory code
+- Redundant descriptions of what the code already clearly shows
+
 ### Keypad Symbols Unicode Mapping
 ```go
 var symbolMap = map[pb.Symbol]string{
