@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Defuse Party - SSH KTANE</title>
+    <title>Defuse Party - Bomb Defusal Game</title>
     <style>
         * {
             margin: 0;
@@ -98,6 +98,33 @@
             fill: #4ade80;
         }
 
+        .copy-tooltip {
+            position: absolute;
+            bottom: 100%;
+            right: 0;
+            background: #2a2a3a;
+            color: #a0a0b0;
+            font-size: 11px;
+            font-weight: 500;
+            padding: 4px 10px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            opacity: 0;
+            transform: translateY(4px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        .copy-tooltip.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .code-block {
+            position: relative;
+        }
+
         .loading-spinner {
             position: absolute;
             top: 50%;
@@ -174,6 +201,7 @@
                     <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
                 </svg>
             </div>
+            <div class="copy-tooltip" id="copy-tooltip">Copied!</div>
         </div>
 
         <div class="footer">
@@ -329,12 +357,17 @@
         const codeBlock = document.getElementById('code-block');
         const copyBtn = document.getElementById('copy-btn');
         const sshCommand = document.getElementById('ssh-command');
+        const copyTooltip = document.getElementById('copy-tooltip');
 
         codeBlock.addEventListener('click', async () => {
             try {
                 await navigator.clipboard.writeText(sshCommand.textContent);
                 copyBtn.classList.add('copied');
-                setTimeout(() => copyBtn.classList.remove('copied'), 300);
+                copyTooltip.classList.add('visible');
+                setTimeout(() => {
+                    copyBtn.classList.remove('copied');
+                    copyTooltip.classList.remove('visible');
+                }, 1500);
             } catch (err) {
                 console.error('Failed to copy:', err);
             }
