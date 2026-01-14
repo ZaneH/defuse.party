@@ -235,15 +235,11 @@ func (m *SimonModule) View() string {
 		bottomRow,
 	)
 
-	controls := styles.Subtitle.Render("[↑/↓/←/→] or [R/G/B/Y] Press button | [ESC] Back to bomb")
-
 	content := lipgloss.JoinVertical(
 		lipgloss.Center,
 		title,
 		"",
 		buttons,
-		"",
-		controls,
 	)
 
 	if m.message != "" {
