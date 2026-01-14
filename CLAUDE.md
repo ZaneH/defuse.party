@@ -206,6 +206,46 @@ type ModuleModel interface {
 }
 ```
 
+### Module View() Requirements
+
+**IMPORTANT**: All module View() methods MUST center their content by wrapping the final output with:
+
+```go
+return lipgloss.NewStyle().
+    Width(60).
+    Align(lipgloss.Center).
+    Render(content)
+```
+
+This ensures modules are properly centered on the screen regardless of terminal width.
+
+**Example** (from password.go):
+```go
+func (m *PasswordModule) View() string {
+    content := lipgloss.JoinVertical(
+        lipgloss.Center,
+        styles.Title.Render("PASSWORD"),
+        "",
+        boxesRow,
+        "",
+        styles.Subtitle.Render("Press [ENTER] to submit"),
+    )
+
+    if m.message != "" {
+        content = lipgloss.JoinVertical(
+            lipgloss.Center,
+            content,
+            styles.Error.Render(m.message),
+        )
+    }
+
+    return lipgloss.NewStyle().
+        Width(60).
+        Align(lipgloss.Center).
+        Render(content)
+}
+```
+
 ### 3.1 Wires Module
 **Input**: Number key (1-6) to cut wire
 **Display**:

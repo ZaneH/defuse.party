@@ -245,14 +245,14 @@ func (m *SimonModule) View() string {
 	if m.message != "" {
 		if m.messageType == "error" {
 			content = lipgloss.JoinVertical(
-				lipgloss.Left,
+				lipgloss.Center,
 				content,
 				"",
 				styles.Error.Render(m.message),
 			)
 		} else if m.messageType == "success" {
 			content = lipgloss.JoinVertical(
-				lipgloss.Left,
+				lipgloss.Center,
 				content,
 				"",
 				styles.Success.Render(m.message),
@@ -260,7 +260,10 @@ func (m *SimonModule) View() string {
 		}
 	}
 
-	return content
+	return lipgloss.NewStyle().
+		Width(60).
+		Align(lipgloss.Center).
+		Render(content)
 }
 
 func (m *SimonModule) renderButton(color pb.Color, label string, size int) string {

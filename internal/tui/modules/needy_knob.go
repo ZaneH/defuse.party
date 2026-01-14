@@ -173,7 +173,10 @@ func (m *NeedyKnobModule) View() string {
 		}
 	}
 
-	return content
+	return lipgloss.NewStyle().
+		Width(60).
+		Align(lipgloss.Center).
+		Render(content)
 }
 
 func (m *NeedyKnobModule) renderTimer() string {
