@@ -28,7 +28,7 @@ type WiresModule struct {
 	width  int
 	height int
 
-	cutWires map[int]bool
+	cutWires map[int32]bool
 
 	message     string
 	messageType string
@@ -40,7 +40,7 @@ func NewWiresModule(mod *pb.Module, client client.GameClient, sessionID, bombID 
 		client:    client,
 		sessionID: sessionID,
 		bombID:    bombID,
-		cutWires:  make(map[int]bool),
+		cutWires:  make(map[int32]bool),
 	}
 }
 
@@ -53,8 +53,8 @@ func (m *WiresModule) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "1", "2", "3", "4", "5", "6":
-			wireNum := int(msg.String()[0] - '1')
-			return m, m.cutWire(wireNum)
+			position := int32(msg.String()[0] - '0')
+			return m, m.cutWire(position)
 		case "esc":
 			return m, func() tea.Msg {
 				return BackToBombMsg{}
@@ -67,7 +67,7 @@ func (m *WiresModule) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *WiresModule) cutWire(wireNum int) tea.Cmd {
+func (m *WiresModule) cutWire(position int32) tea.Cmd {
 	return func() tea.Msg {
 		state := m.mod.GetWiresState()
 		if state == nil {
@@ -75,11 +75,19 @@ func (m *WiresModule) cutWire(wireNum int) tea.Cmd {
 		}
 
 		wires := state.GetWires()
-		if wireNum < 0 || wireNum >= len(wires) {
-			return ModuleResultMsg{Err: fmt.Errorf("invalid wire number")}
+		wireExists := false
+		for _, wire := range wires {
+			if wire.GetPosition() == position {
+				wireExists = true
+				break
+			}
 		}
 
-		if m.cutWires[wireNum] {
+		if !wireExists {
+			return ModuleResultMsg{Err: fmt.Errorf("no wire at position %d", position)}
+		}
+
+		if m.cutWires[position] {
 			return ModuleResultMsg{Err: fmt.Errorf("wire already cut")}
 		}
 
@@ -87,7 +95,7 @@ func (m *WiresModule) cutWire(wireNum int) tea.Cmd {
 			SessionId: m.sessionID,
 			BombId:    m.bombID,
 			ModuleId:  m.mod.GetId(),
-			Input:     &pb.PlayerInput_WiresInput{WiresInput: &pb.WiresInput{WirePosition: int32(wireNum)}},
+			Input:     &pb.PlayerInput_WiresInput{WiresInput: &pb.WiresInput{WirePosition: position}},
 		}
 
 		result, err := m.client.SendInput(context.Background(), input)
@@ -95,7 +103,7 @@ func (m *WiresModule) cutWire(wireNum int) tea.Cmd {
 			return ModuleResultMsg{Err: err}
 		}
 
-		m.cutWires[wireNum] = true
+		m.cutWires[position] = true
 
 		if result.GetStrike() {
 			m.message = "STRIKE! Wrong wire!"
@@ -123,19 +131,31 @@ func (m *WiresModule) View() string {
 		return styles.Subtitle.Render("No wires on this module")
 	}
 
+	wireMap := make(map[int32]*pb.Wire)
+	for _, wire := range wires {
+		wireMap[wire.GetPosition()] = wire
+	}
+
 	var wireLines []string
-	for i, wire := range wires {
+	for pos := int32(1); pos <= 6; pos++ {
+		wire, exists := wireMap[pos]
+		if !exists {
+			line := fmt.Sprintf("  %d: ", pos)
+			wireLines = append(wireLines, line)
+			continue
+		}
+
 		colorName := colorToString(wire.GetWireColor())
 		colorStyle := colorToStyle(wire.GetWireColor())
 
-		isCut := m.cutWires[i] || wire.GetIsCut()
+		isCut := m.cutWires[pos] || wire.GetIsCut()
 
-		wireDisplay := colorStyle.Render("▓▓▓▓▓▓▓▓▓▓▓▓▓")
+		wireDisplay := colorStyle.Render("▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓")
 		if isCut {
 			wireDisplay = styles.Help.Render("────────────────────")
 		}
 
-		line := fmt.Sprintf("  %d: %s  %s", i+1, wireDisplay, colorName)
+		line := fmt.Sprintf("  %d: %s  %s", pos, wireDisplay, colorName)
 		if isCut {
 			line += " (CUT)"
 		}
@@ -151,13 +171,14 @@ func (m *WiresModule) View() string {
 	)
 
 	if m.message != "" {
-		if m.messageType == "error" {
+		switch m.messageType {
+		case "error":
 			content = lipgloss.JoinVertical(
 				lipgloss.Center,
 				content,
 				styles.Error.Render(m.message),
 			)
-		} else if m.messageType == "success" {
+		case "success":
 			content = lipgloss.JoinVertical(
 				lipgloss.Center,
 				content,
