@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="darkreader-lock" />
-    <title>Defuse Party - Bomb Defusal Game</title>
+    <title>defuse.party - Terminal Bomb Defusal</title>
     <style>
         * {
             margin: 0;
@@ -18,16 +18,59 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            background: #0d0d12;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: radial-gradient(ellipse at center, #1a1a24 0%, #0d0d12 100%);
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', 'Monaco', monospace;
             padding: 20px;
             overflow: hidden;
         }
 
+        .terminal-window {
+            background: #0f0f16;
+            border: 1px solid #2a2a3a;
+            border-radius: 8px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            max-width: 700px;
+            overflow: hidden;
+        }
+
+        .terminal-header {
+            background: #1a1a24;
+            border-bottom: 1px solid #2a2a3a;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .terminal-dots {
+            display: flex;
+            gap: 8px;
+        }
+
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #2a2a3a;
+        }
+
+        .terminal-dot.red { background: #ff5f56; }
+        .terminal-dot.yellow { background: #ffbd2e; }
+        .terminal-dot.green { background: #27c93f; }
+
+        .terminal-title {
+            flex: 1;
+            text-align: center;
+            color: #6a6a7a;
+            font-size: 13px;
+            letter-spacing: 0.5px;
+        }
+
         #canvas-container {
             width: 100%;
-            max-width: 500px;
-            height: 300px;
+            height: 400px;
+            position: relative;
         }
 
         canvas {
@@ -39,25 +82,28 @@
         .container {
             text-align: center;
             width: 100%;
-            max-width: 500px;
+            padding: 20px;
         }
 
         .code-block {
             display: flex;
             align-items: center;
             background: #1a1a24;
-            border-radius: 10px;
-            padding: 10px 16px;
-            margin-top: 20px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            border: 1px solid #2a2a3a;
+            border-radius: 6px;
+            padding: 14px 18px;
+            margin-top: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
             gap: 10px;
             cursor: pointer;
-            transition: background 0.2s ease-in, box-shadow 0.2s ease-in;
+            transition: all 0.2s ease;
+            position: relative;
         }
 
         .code-block:hover {
             background: #20202e;
-            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+            border-color: #3a3a4a;
+            box-shadow: 0 4px 16px rgba(110, 231, 183, 0.1);
         }
 
         .code-block .prompt {
@@ -148,75 +194,131 @@
             display: none;
         }
 
-        .tagline {
-            color: #4a4a5a;
-            font-size: 13px;
-            margin-top: 16px;
-            font-weight: 400;
-        }
-
-        .footer {
-            position: fixed;
-            bottom: 16px;
-            right: 20px;
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .footer a {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            color: #5a5a6a;
-            text-decoration: none;
-            font-size: 13px;
-            transition: color 0.2s ease;
-        }
-
-        .footer a:hover {
-            color: #8a8a9a;
-        }
-
-        .footer svg {
-            width: 16px;
+        .cursor {
+            display: inline-block;
+            width: 8px;
             height: 16px;
+            background: #6ee7b7;
+            margin-left: 2px;
+            vertical-align: baseline;
+            animation: blink 1s step-end infinite;
+        }
+
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+
+        .tagline {
+            color: #5a5a6a;
+            font-size: 13px;
+            margin-top: 20px;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        .terminal-footer {
+            background: #0a0a0f;
+            border-top: 1px solid #2a2a3a;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .terminal-footer a {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #6a6a7a;
+            text-decoration: none;
+            font-size: 12px;
+            transition: color 0.2s ease;
+            letter-spacing: 0.3px;
+        }
+
+        .terminal-footer a:hover {
+            color: #6ee7b7;
+        }
+
+        .terminal-footer svg {
+            width: 14px;
+            height: 14px;
             fill: currentColor;
+        }
+
+        #ssh-command {
+            display: flex;
+            justify-content: center;
+        }
+
+        @media (max-width: 600px) {
+            .terminal-window {
+                max-width: 100%;
+            }
+
+            #canvas-container {
+                height: 300px;
+            }
+
+            .terminal-header {
+                padding: 10px 12px;
+            }
+
+            .terminal-title {
+                font-size: 11px;
+            }
+
+            .code-block {
+                padding: 12px 14px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div id="canvas-container">
-            <div class="loading-spinner" id="loading-spinner"></div>
-            <canvas id="scene"></canvas>
-        </div>
-
-        <div class="tagline">Play a bomb defusal game in your terminal</div>
-
-        <div class="code-block" id="code-block">
-            <span class="prompt">$</span>
-            <code id="ssh-command">ssh defuse.party -p 2222</code>
-            <div class="copy-btn" id="copy-btn">
-                <svg viewBox="0 0 24 24">
-                    <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-                </svg>
+    <div class="terminal-window">
+        <div class="terminal-header">
+            <div class="terminal-dots">
+                <div class="terminal-dot red"></div>
+                <div class="terminal-dot yellow"></div>
+                <div class="terminal-dot green"></div>
             </div>
-            <div class="copy-tooltip" id="copy-tooltip">Copied!</div>
+            <div class="terminal-title">defuse.party</div>
         </div>
 
-        <div class="footer">
+        <div class="container">
+            <div id="canvas-container">
+                <div class="loading-spinner" id="loading-spinner"></div>
+                <canvas id="scene"></canvas>
+            </div>
+
+            <div class="tagline">// bomb defusal in your terminal</div>
+
+            <div class="code-block" id="code-block">
+                <span class="prompt">$</span>
+                <code id="ssh-command">ssh defuse.party -p 2222<span class="cursor"></span></code>
+                <div class="copy-btn" id="copy-btn">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                    </svg>
+                </div>
+                <div class="copy-tooltip" id="copy-tooltip">Copied!</div>
+            </div>
+        </div>
+
+        <div class="terminal-footer">
             <a href="https://bomb.zaaane.com" target="_blank" rel="noopener noreferrer">
                 <svg viewBox="0 0 24 24">
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
                 </svg>
-                Web game
+                web game
             </a>
             <a href="https://github.com/ZaneH/keep-talking-tui" target="_blank" rel="noopener noreferrer">
                 <svg viewBox="0 0 24 24">
                     <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
                 </svg>
-                Source
+                source
             </a>
         </div>
     </div>
@@ -241,7 +343,7 @@
         const loadingSpinner = document.getElementById('loading-spinner');
 
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x0d0d12);
+        scene.background = new THREE.Color(0x0f0f16);
 
         const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 100);
 
