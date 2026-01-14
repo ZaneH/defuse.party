@@ -21,15 +21,11 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o tui-server ./cmd/
 
 FROM alpine:latest
 
-RUN apk --no-cache add ca-certificates openssh-keygen
+RUN apk --no-cache add ca-certificates
 
 WORKDIR /root/
 
 COPY --from=builder /app/tui-server .
-
-# Create SSH keys
-RUN mkdir -p .ssh && \
-    ssh-keygen -t ed25519 -f .ssh/id_ed25519 -N ""
 
 EXPOSE 2222
 
