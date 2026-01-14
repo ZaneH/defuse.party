@@ -283,6 +283,26 @@ func (m *Model) handleBombViewKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	faceModules := m.getCurrentFaceModules()
 
 	switch msg.String() {
+	case "1", "2", "3", "4", "5", "6", "7", "8", "9":
+		moduleIdx := int(msg.String()[0] - '1')
+		if moduleIdx >= 0 && moduleIdx < len(faceModules) {
+			m.state = StateModuleActive
+			mod := faceModules[moduleIdx]
+			moduleID := mod.GetId()
+
+			if cached, exists := m.moduleCache[moduleID]; exists {
+				m.activeModule = cached
+				return m, nil
+			} else {
+				if mod.GetType() == pb.Module_CLOCK {
+					m.activeModule = m.createClockModule(mod)
+				} else {
+					m.activeModule = modules.NewModule(mod, m.gameClient, m.sessionID, m.getCurrentBomb().GetId())
+				}
+				m.moduleCache[moduleID] = m.activeModule
+				return m, m.activeModule.Init()
+			}
+		}
 	case "enter":
 		if len(faceModules) > 0 {
 			m.state = StateModuleActive
@@ -785,7 +805,7 @@ func (m *Model) renderFooter() string {
 	case StateBombSelection:
 		hint = "[ENTER] Pick up bomb | [↑/↓] Navigate | [Q]uit"
 	case StateBombView:
-		hint = "[ENTER] Select module | [<]/[>] Flip face | [ESC] Put down | [Q]uit"
+		hint = "[1-9] Select module | [<]/[>] Flip face | [ESC] Put down | [Q]uit"
 	case StateModuleActive:
 		hint = m.activeModule.Footer()
 	}
