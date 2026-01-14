@@ -341,9 +341,33 @@ func (m *PasswordModule) View() string {
 - [x] Real-time clock animation (uses `time.Since()` instead of tick counter)
 - [x] Index derived from frequency (fallback when backend returns 0)
 
-### 3.5-3.12 Remaining Modules (TODO)
+### 3.5 Memory Module
+**Input**: `[1-4]` Press button
+**Display**:
+```
+╔════════════════════════════════════╗
+║           MEMORY                   ║
+║                                    ║
+║   ┌─────┐                          ║
+║   │  3  │  (screen number)         ║
+║   └─────┘                          ║
+║                                    ║
+║  [1]  [2]  [3]  [4]    ● Stage 5   ║
+║   2    4    1    3     ○ Stage 4   ║
+║                        ○ Stage 3   ║
+║                        ○ Stage 2   ║
+║                        ○ Stage 1   ║
+╚════════════════════════════════════╝
+```
+- [x] Screen number display (top)
+- [x] Four buttons with labels and displayed numbers
+- [x] Stage progress indicators (right side, 5 circles)
+- [x] Green filled circles (●) for completed stages
+- [x] Empty circles (○) for incomplete stages
+- [x] Stage indicators reset to 0 on STRIKE (state update now happens before strike check)
+
+### 3.6-3.12 Remaining Modules (TODO)
 - [x] Simon Says Module
-- [x] Memory Module
 - [x] Who's On First Module
 - [x] Maze Module
 - [x] Morse Code Module

@@ -87,6 +87,12 @@ func (m *WhosOnFirstModule) pressButton(pos int) tea.Cmd {
 			return ModuleResultMsg{Err: err}
 		}
 
+		if wofResult := result.GetWhosOnFirstInputResult(); wofResult != nil {
+			if wofState := wofResult.GetWhosOnFirstState(); wofState != nil {
+				m.mod.State = &pb.Module_WhosOnFirstState{WhosOnFirstState: wofState}
+			}
+		}
+
 		if result.GetStrike() {
 			m.message = "STRIKE!"
 			m.messageType = "error"
@@ -96,12 +102,6 @@ func (m *WhosOnFirstModule) pressButton(pos int) tea.Cmd {
 		} else {
 			m.message = ""
 			m.messageType = ""
-
-			if wofResult := result.GetWhosOnFirstInputResult(); wofResult != nil {
-				if wofState := wofResult.GetWhosOnFirstState(); wofState != nil {
-					m.mod.State = &pb.Module_WhosOnFirstState{WhosOnFirstState: wofState}
-				}
-			}
 		}
 
 		return ModuleResultMsg{Result: result}

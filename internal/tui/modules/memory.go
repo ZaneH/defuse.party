@@ -79,6 +79,12 @@ func (m *MemoryModule) pressButton(index int) tea.Cmd {
 			return ModuleResultMsg{Err: err}
 		}
 
+		if memResult := result.GetMemoryInputResult(); memResult != nil {
+			if memState := memResult.GetMemoryState(); memState != nil {
+				m.mod.State = &pb.Module_MemoryState{MemoryState: memState}
+			}
+		}
+
 		if result.GetStrike() {
 			m.message = "STRIKE!"
 			m.messageType = "error"
@@ -88,12 +94,6 @@ func (m *MemoryModule) pressButton(index int) tea.Cmd {
 		} else {
 			m.message = ""
 			m.messageType = ""
-
-			if memResult := result.GetMemoryInputResult(); memResult != nil {
-				if memState := memResult.GetMemoryState(); memState != nil {
-					m.mod.State = &pb.Module_MemoryState{MemoryState: memState}
-				}
-			}
 		}
 
 		return ModuleResultMsg{Result: result}
