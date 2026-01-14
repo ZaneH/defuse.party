@@ -14,7 +14,7 @@ This project provides a text-based interface for playing defuse.party, connectab
 - Go 1.21+
 - The gRPC backend server running
 
-**Note**: This TUI imports protocol buffer definitions from the [backend repository](https://github.com/ZaneH/keep-talking) as a Go module dependency. Proto files are not duplicated in this repository - they are consumed directly from the backend's generated code.
+**Note**: This TUI imports protocol buffer definitions from the [backend repository](https://github.com/ZaneH/keep-talking) as a Go module dependency. Proto files are not duplicated in this repository - they are consumed directly from the backend's `pkg/proto` package.
 
 ### Building
 
@@ -48,6 +48,65 @@ ssh -p 2222 <server-ip>
 ```
 
 On first run, SSH host keys will be generated in `.ssh/`.
+
+## Docker
+
+### Building
+
+```bash
+docker build -t defuse-party:latest .
+```
+
+The Dockerfile uses `go get` to fetch the backend proto package from GitHub. Ensure the backend changes are committed and pushed before building.
+
+### Running
+
+```bash
+docker run -p 2222:2222 -e TUI_GRPC_ADDR=host.docker.internal:50051 defuse-party:latest
+```
+
+## Development Workflow
+
+### Production Mode (Default)
+
+By default, the TUI fetches proto definitions from the published backend repository on GitHub:
+
+```bash
+# Update to latest backend version
+go get -u github.com/ZaneH/keep-talking@latest
+go mod tidy
+```
+
+This mode is used for:
+- Docker builds
+- Production environments
+
+### Local Development Mode
+
+For rapid local development with proto changes, you can use the local backend:
+
+1. Edit `go.mod` and uncomment the `replace` directive:
+   ```go
+   replace github.com/ZaneH/keep-talking => ../keep-talking
+   ```
+
+2. Make changes to proto files in `../keep-talking/proto/`
+
+3. Regenerate proto files in the backend:
+   ```bash
+   cd ../keep-talking
+   buf generate
+   ```
+
+4. Test locally (TUI will use your local backend changes)
+
+5. When ready to deploy:
+   - Commit and push backend changes
+   - Re-comment the `replace` directive in `go.mod`
+   - Run `go get -u github.com/ZaneH/keep-talking@latest`
+   - Commit TUI with updated `go.mod`
+
+**Important**: Never commit with the `replace` directive uncommented - it breaks production builds.
 
 ## Environment Variables
 
