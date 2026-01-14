@@ -41,7 +41,7 @@ func NewModule(mod *pb.Module, client client.GameClient, sessionID, bombID strin
 	case pb.Module_MAZE:
 		return NewMazeModule(mod, client, sessionID, bombID)
 	case pb.Module_NEEDY_VENT_GAS:
-		return NewUnimplementedModule(mod)
+		return NewNeedyVentGasModule(mod, client, sessionID, bombID)
 	default:
 		return NewUnimplementedModule(mod)
 	}
