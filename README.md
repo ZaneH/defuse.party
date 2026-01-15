@@ -1,4 +1,4 @@
-# defuse.party
+# defuse.party: tui
 
 A Terminal User Interface (TUI) recreation of a popular bomb defusal game served over SSH.
 

@@ -18,16 +18,6 @@ import (
 	pb "github.com/ZaneH/keep-talking/pkg/proto"
 )
 
-type AppState int
-
-const (
-	StateLoading AppState = iota
-	StateBombSelection
-	StateBombView
-	StateModuleActive
-	StateGameOver
-)
-
 type Model struct {
 	state AppState
 
@@ -54,6 +44,20 @@ type Model struct {
 	flashStrike      bool
 
 	showQuitConfirm bool
+
+	menuSelection     int
+	sectionSelection  int
+	missionSelection  int
+	freePlaySelection int
+	gameOverSelection int
+
+	freePlayConfig    FreePlayConfig
+	freePlayCursor    int
+	freePlayInModules bool
+
+	showManualDialog bool
+
+	pendingGameConfig *pb.GameConfig
 }
 
 func NewProgramHandler(grpcAddr string) bubbletea.ProgramHandler {
@@ -65,7 +69,7 @@ func NewProgramHandler(grpcAddr string) bubbletea.ProgramHandler {
 
 		return tea.NewProgram(
 			&Model{
-				state:       StateLoading,
+				state:       StateMainMenu,
 				grpcAddr:    grpcAddr,
 				moduleCache: make(map[string]modules.ModuleModel),
 			},
@@ -76,22 +80,18 @@ func NewProgramHandler(grpcAddr string) bubbletea.ProgramHandler {
 	}
 }
 
-type loadingErrorMsg struct{ err error }
-type gameReadyMsg struct {
-	client    client.GameClient
-	sessionID string
-	bombs     []*pb.Bomb
-}
-type tickMsg struct{ t time.Time }
-
 func (m *Model) Init() tea.Cmd {
+	return nil
+}
+
+func (m *Model) StartGame(config *pb.GameConfig) tea.Cmd {
 	return func() tea.Msg {
 		client, err := client.New(m.grpcAddr)
 		if err != nil {
 			return loadingErrorMsg{err: fmt.Errorf("failed to connect: %w", err)}
 		}
 
-		sessionID, err := client.CreateGame(context.Background())
+		sessionID, err := client.CreateGame(context.Background(), config)
 		if err != nil {
 			client.Close()
 			return loadingErrorMsg{err: fmt.Errorf("failed to create game: %w", err)}
@@ -173,7 +173,6 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if bomb != nil {
 				bomb.StrikeCount = bombStatus.GetStrikeCount()
 
-				// Update cached clock module strikes
 				for _, cachedMod := range m.moduleCache {
 					if cachedMod.ModuleType() == pb.Module_CLOCK {
 						if clockMod, ok := cachedMod.(*modules.ClockModule); ok {
@@ -202,7 +201,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyMsg:
-		// Handle quit confirmation dialog
+		if m.showManualDialog {
+			switch msg.String() {
+			case "esc":
+				m.showManualDialog = false
+			}
+			return m, nil
+		}
+
 		if m.showQuitConfirm {
 			switch msg.String() {
 			case "y", "Y":
@@ -214,7 +220,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.showQuitConfirm = false
 				return m, nil
 			}
-			return m, nil // Ignore other keys while dialog is shown
+			return m, nil
+		}
+
+		if cmd, handled := m.handleMenuKeys(msg.String()); handled {
+			return m, cmd
 		}
 
 		switch m.state {
@@ -224,7 +234,6 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.handleBombViewKeys(msg)
 		}
 
-		// Fallback quit handler for states not explicitly handled above
 		if msg.String() == "q" {
 			m.showQuitConfirm = true
 			return m, nil
@@ -250,6 +259,70 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+func (m *Model) handleMenuKeys(key string) (tea.Cmd, bool) {
+	switch m.state {
+	case StateMainMenu:
+		return m.handleMainMenuKeys(key)
+	case StateSectionSelect:
+		return m.handleSectionSelectKeys(key)
+	case StateMissionSelect:
+		return m.handleMissionSelectKeys(key)
+	case StateFreePlayMenu:
+		return m.handleFreePlayMenuKeys(key)
+	case StateFreePlayAdvanced:
+		return m.handleFreePlayAdvancedKeys(key)
+	case StateGameOver:
+		return m.handleGameOverKeys(key)
+	}
+	return nil, false
+}
+
+func (m *Model) handleGameOverKeys(key string) (tea.Cmd, bool) {
+	handled := true
+	switch key {
+	case "up", "k":
+		if m.gameOverSelection > 0 {
+			m.gameOverSelection--
+		}
+	case "down", "j":
+		if m.gameOverSelection < 1 {
+			m.gameOverSelection++
+		}
+	case "enter":
+		if m.gameOverSelection == 0 {
+			m.resetToMainMenu()
+		} else {
+			if m.gameClient != nil {
+				m.gameClient.Close()
+			}
+			return tea.Quit, true
+		}
+	default:
+		handled = false
+	}
+	return nil, handled
+}
+
+func (m *Model) resetToMainMenu() {
+	m.state = StateMainMenu
+	m.menuSelection = 0
+	m.gameClient = nil
+	m.sessionID = ""
+	m.bombs = nil
+	m.selectedBomb = 0
+	m.currentFace = 0
+	m.selectedModule = 0
+	m.activeModule = nil
+	m.moduleCache = make(map[string]modules.ModuleModel)
+	m.err = nil
+	m.startedAt = time.Time{}
+	m.duration = 0
+	m.flashStrike = false
+	m.showQuitConfirm = false
+	m.showManualDialog = false
+	m.pendingGameConfig = nil
 }
 
 func (m *Model) handleBombSelectionKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -313,7 +386,6 @@ func (m *Model) handleBombViewKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.activeModule = cached
 				return m, nil
 			} else {
-				// Special handling for clock module
 				if mod.GetType() == pb.Module_CLOCK {
 					m.activeModule = m.createClockModule(mod)
 				} else {
@@ -450,10 +522,20 @@ func (m *Model) View() string {
 	var view string
 
 	switch m.state {
+	case StateMainMenu:
+		view = m.mainMenuView()
+	case StateSectionSelect:
+		view = m.sectionSelectView()
+	case StateMissionSelect:
+		view = m.missionSelectView()
+	case StateFreePlayMenu:
+		view = m.freePlayMenuView()
+	case StateFreePlayAdvanced:
+		view = m.freePlayAdvancedView()
 	case StateLoading:
 		view = m.loadingView()
 	case StateGameOver:
-		view = m.errorView()
+		view = m.gameOverView()
 	case StateBombSelection:
 		view = m.bombSelectionView()
 	case StateBombView:
@@ -474,7 +556,28 @@ func (m *Model) View() string {
 		}
 	}
 
-	// Overlay quit confirmation dialog
+	if m.showManualDialog {
+		dialog := styles.DialogBox.Render(
+			lipgloss.JoinVertical(
+				lipgloss.Center,
+				styles.Title.Render("MANUAL"),
+				"",
+				styles.Subtitle.Render("Open this URL in your browser:"),
+				"",
+				styles.Active.Render(hyperlink("https://bombmanual.com/", "https://bombmanual.com/")),
+				"",
+				styles.Help.Render("(Click the link or copy to your browser)"),
+				"",
+				styles.Help.Render("[ESC] Back"),
+			),
+		)
+		view = lipgloss.Place(
+			m.width, m.height,
+			lipgloss.Center, lipgloss.Center,
+			dialog,
+		)
+	}
+
 	if m.showQuitConfirm {
 		dialog := styles.DialogBox.Render(
 			lipgloss.JoinVertical(
@@ -500,7 +603,7 @@ func (m *Model) loadingView() string {
 			lipgloss.Center,
 			styles.Title.Render("KEEP TALKING AND NOBODY EXPLODES"),
 			"",
-			styles.Subtitle.Render("Connecting to game server..."),
+			styles.Subtitle.Render("Creating game..."),
 		),
 		m.width, m.height,
 	)
@@ -520,305 +623,4 @@ func (m *Model) errorView() string {
 		),
 		m.width, m.height,
 	)
-}
-
-func (m *Model) bombSelectionView() string {
-	header := m.renderHeader(time.Now())
-	footer := m.renderFooter()
-
-	var bombList []string
-	for i, bomb := range m.bombs {
-		serial := bomb.GetSerialNumber()
-		numModules := len(bomb.GetModules())
-		if i == m.selectedBomb {
-			bombList = append(bombList, styles.Active.Render(fmt.Sprintf("> BOMB %d: Serial %s  [%d modules]", i+1, serial, numModules)))
-		} else {
-			bombList = append(bombList, fmt.Sprintf("  BOMB %d: Serial %s  [%d modules]", i+1, serial, numModules))
-		}
-	}
-
-	if len(bombList) == 0 {
-		bombList = append(bombList, "  No bombs available")
-	}
-
-	content := lipgloss.JoinVertical(
-		lipgloss.Center,
-		styles.Title.Render("SELECT A BOMB"),
-		"",
-		lipgloss.JoinVertical(lipgloss.Left, bombList...),
-	)
-
-	return lipgloss.JoinVertical(
-		lipgloss.Top,
-		header,
-		styles.ContentBox.Render(content),
-		footer,
-	)
-}
-
-func (m *Model) bombView() string {
-	header := m.renderHeader(time.Now())
-	footer := m.renderFooter()
-
-	faceModules := m.getCurrentFaceModules()
-
-	var modules []string
-	for i, mod := range faceModules {
-		modTypeName := m.moduleTypeName(mod.GetType())
-		timer := m.getModuleTimer(mod)
-		solved := mod.GetSolved()
-		status := "○ PENDING"
-		if solved {
-			status = "✓ SOLVED"
-		}
-
-		// Format module line with right-aligned timer
-		moduleLine := fmt.Sprintf("[%d] %s", i+1, modTypeName)
-		if timer != "" {
-			// Right-align timer within ~40 char width
-			nameLen := len(moduleLine)
-			timerLen := len(timer)
-			padding := 40 - nameLen - timerLen
-			if padding < 1 {
-				padding = 1
-			}
-			moduleLine = fmt.Sprintf("%s%*s%s", moduleLine, padding, "", timer)
-		}
-
-		if i == m.selectedModule {
-			modules = append(modules, styles.Active.Render(moduleLine))
-			modules = append(modules, styles.Active.Render(fmt.Sprintf("  > SELECTED    %s", status)))
-		} else {
-			modules = append(modules, moduleLine)
-			modules = append(modules, fmt.Sprintf("  %s", status))
-		}
-		modules = append(modules, "")
-	}
-
-	faceName := "FRONT"
-	if m.currentFace == 1 {
-		faceName = "BACK"
-	} else if m.currentFace > 1 {
-		faceName = fmt.Sprintf("FACE %d", m.currentFace+1)
-	}
-
-	content := lipgloss.JoinVertical(
-		lipgloss.Center,
-		styles.Title.Render(fmt.Sprintf("BOMB %d - %s", m.selectedBomb+1, faceName)),
-		"",
-		lipgloss.JoinVertical(lipgloss.Left, modules...),
-	)
-
-	return lipgloss.JoinVertical(
-		lipgloss.Top,
-		header,
-		styles.ContentBox.Render(content),
-		footer,
-	)
-}
-
-func (m *Model) moduleTypeName(t pb.Module_ModuleType) string {
-	switch t {
-	case pb.Module_CLOCK:
-		return "CLOCK"
-	case pb.Module_WIRES:
-		return "WIRES"
-	case pb.Module_PASSWORD:
-		return "PASSWORD"
-	case pb.Module_BIG_BUTTON:
-		return "BIG BUTTON"
-	case pb.Module_SIMON:
-		return "SIMON"
-	case pb.Module_KEYPAD:
-		return "KEYPAD"
-	case pb.Module_WHOS_ON_FIRST:
-		return "WHO'S ON FIRST"
-	case pb.Module_MEMORY:
-		return "MEMORY"
-	case pb.Module_MORSE:
-		return "MORSE CODE"
-	case pb.Module_NEEDY_VENT_GAS:
-		return "VENT GAS"
-	case pb.Module_NEEDY_KNOB:
-		return "KNOB"
-	case pb.Module_MAZE:
-		return "MAZE"
-	default:
-		return "UNKNOWN"
-	}
-}
-
-func (m *Model) getModuleTimer(mod *pb.Module) string {
-	now := time.Now()
-
-	if mod.GetType() == pb.Module_CLOCK {
-		elapsed := now.Sub(m.startedAt)
-		remaining := m.duration - elapsed
-		if remaining < 0 {
-			remaining = 0
-		}
-		mins := int(remaining.Minutes())
-		secs := int(remaining.Seconds()) % 60
-		return fmt.Sprintf("[%d:%02d]", mins, secs)
-	}
-
-	if mod.GetType() == pb.Module_NEEDY_VENT_GAS {
-		if state := mod.GetNeedyVentGasState(); state != nil {
-			if state.GetCountdownStartedAt() == 0 {
-				return "" // Inactive, no timer
-			}
-			startedAt := time.Unix(state.GetCountdownStartedAt(), 0)
-			elapsed := now.Sub(startedAt)
-			remaining := time.Duration(state.GetCountdownDuration())*time.Second - elapsed
-			if remaining < 0 {
-				remaining = 0
-			}
-			secs := int(remaining.Seconds())
-			return fmt.Sprintf("[0:%02d]", secs)
-		}
-	}
-
-	if mod.GetType() == pb.Module_NEEDY_KNOB {
-		if state := mod.GetNeedyKnobState(); state != nil {
-			if state.GetCountdownStartedAt() == 0 {
-				return "" // Inactive, no timer
-			}
-			startedAt := time.Unix(state.GetCountdownStartedAt(), 0)
-			elapsed := now.Sub(startedAt)
-			remaining := time.Duration(state.GetCountdownDuration())*time.Second - elapsed
-			if remaining < 0 {
-				remaining = 0
-			}
-			secs := int(remaining.Seconds())
-			return fmt.Sprintf("[0:%02d]", secs)
-		}
-	}
-
-	return ""
-}
-
-func (m *Model) renderHeader(now time.Time) string {
-	bomb := m.getCurrentBomb()
-	if bomb == nil {
-		return styles.HeaderBox.Render(
-			lipgloss.JoinHorizontal(
-				lipgloss.Left,
-				styles.Title.Render("KEEP TALKING AND NOBODY EXPLODES - DEFUSER TERMINAL"),
-			),
-		)
-	}
-
-	elapsed := now.Sub(m.startedAt)
-	remaining := m.duration - elapsed
-	if remaining < 0 {
-		remaining = 0
-	}
-
-	minutes := int(remaining.Minutes())
-	seconds := int(remaining.Seconds()) % 60
-	timerStr := fmt.Sprintf("%02d:%02d", minutes, seconds)
-
-	timerStyle := styles.Normal
-	if remaining < 30*time.Second {
-		timerStyle = styles.Error
-	} else if remaining < 60*time.Second {
-		timerStyle = styles.Warning
-	}
-
-	if m.flashStrike {
-		timerStyle = styles.Strike
-	}
-
-	strikes := ""
-	for i := int32(0); i < bomb.GetMaxStrikes(); i++ {
-		if i < bomb.GetStrikeCount() {
-			strikes += "[X] "
-		} else {
-			strikes += "[ ] "
-		}
-	}
-
-	serial := bomb.GetSerialNumber()
-	batteries := bomb.GetBatteries()
-	ports := bomb.GetPorts()
-	portStr := ""
-	if len(ports) > 0 {
-		var portNames []string
-		for _, p := range ports {
-			switch p {
-			case pb.Port_DVID:
-				portNames = append(portNames, "DVI")
-			case pb.Port_RCA:
-				portNames = append(portNames, "RCA")
-			case pb.Port_PS2:
-				portNames = append(portNames, "PS2")
-			case pb.Port_RJ45:
-				portNames = append(portNames, "RJ45")
-			case pb.Port_SERIAL:
-				portNames = append(portNames, "SER")
-			}
-		}
-		portStr = fmt.Sprintf("Ports: %s", joinStrings(portNames, ", "))
-	}
-
-	batteryStr := ""
-	if batteries > 0 {
-		batteryStr = fmt.Sprintf("Batteries: %d", batteries)
-	}
-
-	headerContent := lipgloss.JoinHorizontal(
-		lipgloss.Left,
-		styles.Title.Render("KEEP TALKING AND NOBODY EXPLODES"),
-		"  ",
-		timerStyle.Render(fmt.Sprintf("Time: %s", timerStr)),
-		"  ",
-		styles.Normal.Render(fmt.Sprintf("Serial: %s", serial)),
-	)
-
-	if batteryStr != "" || portStr != "" {
-		headerContent = lipgloss.JoinVertical(
-			lipgloss.Left,
-			headerContent,
-			lipgloss.JoinHorizontal(
-				lipgloss.Left,
-				styles.Normal.Render(strikes),
-				"  ",
-				styles.Help.Render(batteryStr),
-				"  ",
-				styles.Help.Render(portStr),
-			),
-		)
-	} else {
-		headerContent = lipgloss.JoinVertical(
-			lipgloss.Left,
-			headerContent,
-			styles.Normal.Render(strikes),
-		)
-	}
-
-	return styles.HeaderBox.Render(headerContent)
-}
-
-func (m *Model) renderFooter() string {
-	hint := ""
-	switch m.state {
-	case StateBombSelection:
-		hint = "[ENTER] Pick up bomb | [↑/↓] Navigate | [Q]uit"
-	case StateBombView:
-		hint = "[1-9] Select module | [<]/[>] Flip face | [ESC] Put down | [Q]uit"
-	case StateModuleActive:
-		hint = m.activeModule.Footer()
-	}
-	return styles.FooterBox.Render(styles.Help.Render(hint))
-}
-
-func joinStrings(strs []string, sep string) string {
-	if len(strs) == 0 {
-		return ""
-	}
-	result := strs[0]
-	for i := 1; i < len(strs); i++ {
-		result += sep + strs[i]
-	}
-	return result
 }

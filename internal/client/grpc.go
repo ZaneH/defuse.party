@@ -12,7 +12,7 @@ import (
 )
 
 type GameClient interface {
-	CreateGame(ctx context.Context) (sessionID string, err error)
+	CreateGame(ctx context.Context, config *pb.GameConfig) (sessionID string, err error)
 	GetBombs(ctx context.Context, sessionID string) ([]*pb.Bomb, error)
 	SendInput(ctx context.Context, input *pb.PlayerInput) (*pb.PlayerInputResult, error)
 	Close() error
@@ -35,11 +35,13 @@ func New(addr string) (GameClient, error) {
 	}, nil
 }
 
-func (c *grpcClient) CreateGame(ctx context.Context) (string, error) {
+func (c *grpcClient) CreateGame(ctx context.Context, config *pb.GameConfig) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	resp, err := c.client.CreateGame(ctx, &pb.CreateGameRequest{})
+	resp, err := c.client.CreateGame(ctx, &pb.CreateGameRequest{
+		Config: config,
+	})
 	if err != nil {
 		return "", fmt.Errorf("failed to create game: %w", err)
 	}
