@@ -128,7 +128,7 @@ type Model struct {
 Displays at top of screen (always visible):
 ```
 ╔══════════════════════════════════════════════════════════════════════╗
-║  KEEP TALKING AND NOBODY EXPLODES   Time: 04:40  Serial: MXSDCZ      ║
+║  DEFUSE.PARTY   Time: 04:40  Serial: MXSDCZ      ║
 ║ [ ] [ ] [ ]   Batteries: 3  Ports: RJ45, PS2, SER                    ║
 ╚══════════════════════════════════════════════════════════════════════╝
 ```

@@ -601,7 +601,7 @@ func (m *Model) loadingView() string {
 	return styles.Center(
 		lipgloss.JoinVertical(
 			lipgloss.Center,
-			styles.Title.Render("KEEP TALKING AND NOBODY EXPLODES"),
+			styles.Title.Render("DEFUSE.PARTY"),
 			"",
 			styles.Subtitle.Render("Creating game..."),
 		),

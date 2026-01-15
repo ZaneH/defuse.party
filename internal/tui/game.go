@@ -143,7 +143,7 @@ func (m *Model) gameOverView() string {
 
 	return lipgloss.JoinVertical(
 		lipgloss.Top,
-		styles.HeaderBox.Render(styles.Title.Render("KEEP TALKING AND NOBODY EXPLODES")),
+		styles.HeaderBox.Render(styles.Title.Render("DEFUSE.PARTY")),
 		styles.ContentBox.Render(content),
 		m.renderFooter(),
 	)
@@ -155,7 +155,7 @@ func (m *Model) renderHeader(now time.Time) string {
 		return styles.HeaderBox.Render(
 			lipgloss.JoinHorizontal(
 				lipgloss.Left,
-				styles.Title.Render("KEEP TALKING AND NOBODY EXPLODES - DEFUSER TERMINAL"),
+				styles.Title.Render("DEFUSE.PARTY - DEFUSER TERMINAL"),
 			),
 		)
 	}
@@ -220,7 +220,7 @@ func (m *Model) renderHeader(now time.Time) string {
 
 	headerContent := lipgloss.JoinHorizontal(
 		lipgloss.Left,
-		styles.Title.Render("KEEP TALKING AND NOBODY EXPLODES"),
+		styles.Title.Render("DEFUSE.PARTY"),
 		"  ",
 		timerStyle.Render(fmt.Sprintf("Time: %s", timerStr)),
 		"  ",

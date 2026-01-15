@@ -64,7 +64,7 @@ func (m *Model) freePlayMenuView() string {
 
 	return lipgloss.JoinVertical(
 		lipgloss.Top,
-		styles.HeaderBox.Render(styles.Title.Render("KEEP TALKING AND NOBODY EXPLODES")),
+		styles.HeaderBox.Render(styles.Title.Render("DEFUSE.PARTY")),
 		styles.ContentBox.Render(content),
 		m.renderFooter(),
 	)
@@ -207,7 +207,7 @@ func (m *Model) freePlayAdvancedView() string {
 
 	return lipgloss.JoinVertical(
 		lipgloss.Top,
-		styles.HeaderBox.Render(styles.Title.Render("KEEP TALKING AND NOBODY EXPLODES")),
+		styles.HeaderBox.Render(styles.Title.Render("DEFUSE.PARTY")),
 		styles.ContentBox.Render(content),
 		m.renderFooter(),
 	)
