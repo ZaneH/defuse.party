@@ -3,6 +3,7 @@ module github.com/ZaneH/defuse.party-tui
 go 1.23.4
 
 require (
+	github.com/ZaneH/defuse.party-go v0.0.0-20260115090110-9309687c47a4
 	github.com/charmbracelet/bubbletea v1.3.1
 	github.com/charmbracelet/lipgloss v1.0.0
 	github.com/charmbracelet/ssh v0.0.0-20240202115812-f4ab1009799a
@@ -41,8 +42,3 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250303144028-a0af3efb3deb // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 )
-
-// Development: Uncomment to use local backend (requires ../keep-talking to exist)
-// This allows instant feedback when changing proto definitions locally.
-// DO NOT commit with this uncommented - it breaks production builds.
-// replace github.com/ZaneH/defuse.party-go => ../keep-talking
